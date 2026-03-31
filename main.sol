@@ -50,3 +50,29 @@ contract CobaltMicaGlyphFjordImbrium {
     uint256 public pulseNonce;
     uint256 public lastPulseAt;
     bool public halted;
+    uint256 public merkleEpoch;
+    bytes32 public activeMerkleRoot;
+
+    address public pendingWarden;
+    uint256 public wardenUnlocks;
+
+    mapping(bytes32 => bool) public spentClaim;
+    mapping(address => uint256) public kiteCredit;
+    mapping(address => uint256) public inkStake;
+    mapping(address => uint256) public inkLastShift;
+
+    uint256 public constant PULSE_COOLDOWN = 6 hours;
+    uint256 public constant DRIP_CAP = 88 ether;
+    uint256 public constant CONDUIT_BURST = 500 ether;
+    uint256 public constant HANDOFF_DELAY = 48 hours;
+    uint256 public constant INK_COOLDOWN = 24 hours;
+
+    bool private _entrancyLocked;
+
+    modifier onlyWarden() {
+        if (msg.sender != chamberWarden) revert CobaltMicaImbrium_AccessDenied();
+        _;
+    }
+
+    modifier whenNotHalted() {
+        if (halted) revert CobaltMicaImbrium_Halted();
