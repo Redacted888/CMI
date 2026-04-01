@@ -76,3 +76,29 @@ contract CobaltMicaGlyphFjordImbrium {
 
     modifier whenNotHalted() {
         if (halted) revert CobaltMicaImbrium_Halted();
+        _;
+    }
+
+    modifier nonReentrant() {
+        if (_entrancyLocked) revert CobaltMicaImbrium_AccessDenied();
+        _entrancyLocked = true;
+        _;
+        _entrancyLocked = false;
+    }
+
+    constructor(address warden_, address conduit_) {
+        if (warden_ == address(0) || conduit_ == address(0)) revert CobaltMicaImbrium_AccessDenied();
+        chamberWarden = warden_;
+        conduit = conduit_;
+        genesisEpoch = block.timestamp;
+        imbriumSalt = keccak256(abi.encodePacked("cobalt-mica-imbrium", block.chainid, warden_, conduit_));
+    }
+
+    receive() external payable whenNotHalted {
+        emit CobaltMicaImbrium_Deposit(msg.sender, msg.value, bytes32(0));
+    }
+
+    function depositWithMemo(bytes32 memo) external payable whenNotHalted {
+        if (msg.value == 0) revert CobaltMicaImbrium_AmountZero();
+        emit CobaltMicaImbrium_Deposit(msg.sender, msg.value, memo);
+    }
