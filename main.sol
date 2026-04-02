@@ -102,3 +102,29 @@ contract CobaltMicaGlyphFjordImbrium {
         if (msg.value == 0) revert CobaltMicaImbrium_AmountZero();
         emit CobaltMicaImbrium_Deposit(msg.sender, msg.value, memo);
     }
+
+    function proposeSuccessor(address next) external onlyWarden {
+        if (next == address(0) || next == chamberWarden) revert CobaltMicaImbrium_AccessDenied();
+        pendingWarden = next;
+        wardenUnlocks = block.timestamp + HANDOFF_DELAY;
+        emit CobaltMicaImbrium_SuccessorProposed(chamberWarden, next, wardenUnlocks);
+    }
+
+    function clearSuccessor() external onlyWarden {
+        pendingWarden = address(0);
+        wardenUnlocks = 0;
+        emit CobaltMicaImbrium_SuccessorCleared(chamberWarden);
+    }
+
+    function acceptSuccessor() external {
+        if (pendingWarden == address(0)) revert CobaltMicaImbrium_HandoffVacant();
+        if (msg.sender != pendingWarden) revert CobaltMicaImbrium_AccessDenied();
+        if (block.timestamp < wardenUnlocks) revert CobaltMicaImbrium_HandoffTiming();
+
+        address prev = chamberWarden;
+        chamberWarden = pendingWarden;
+        pendingWarden = address(0);
+        wardenUnlocks = 0;
+
+        emit CobaltMicaImbrium_WardenAdvanced(prev, chamberWarden);
+    }
