@@ -128,3 +128,29 @@ contract CobaltMicaGlyphFjordImbrium {
 
         emit CobaltMicaImbrium_WardenAdvanced(prev, chamberWarden);
     }
+
+    function setHalted(bool on) external onlyWarden {
+        halted = on;
+        emit CobaltMicaImbrium_HaltSet(on);
+    }
+
+    function setMerkleRoot(bytes32 root) external onlyWarden {
+        unchecked {
+            ++merkleEpoch;
+        }
+        activeMerkleRoot = root;
+        emit CobaltMicaImbrium_MerkleRoot(root, merkleEpoch);
+    }
+
+    function wardenSetCredit(address holder, uint256 amount) external onlyWarden {
+        kiteCredit[holder] = amount;
+        emit CobaltMicaImbrium_CreditSet(holder, amount);
+    }
+
+    function imprintLedger(bytes32 digest) external onlyWarden {
+        emit CobaltMicaImbrium_Imprint(digest);
+    }
+
+    function imprintBatch(bytes32[] calldata digests) external onlyWarden {
+        uint256 n = digests.length;
+        if (n == 0 || n > 32) revert CobaltMicaImbrium_BatchLength();
