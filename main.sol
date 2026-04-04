@@ -154,3 +154,29 @@ contract CobaltMicaGlyphFjordImbrium {
     function imprintBatch(bytes32[] calldata digests) external onlyWarden {
         uint256 n = digests.length;
         if (n == 0 || n > 32) revert CobaltMicaImbrium_BatchLength();
+        bytes32 head = digests[0];
+        bytes32 tail = digests[n - 1];
+        for (uint256 i = 0; i < n; ++i) {
+            emit CobaltMicaImbrium_Imprint(digests[i]);
+        }
+        emit CobaltMicaImbrium_BatchImprint(n, head, tail);
+    }
+
+    function wardenMemoPulse(
+        address sink,
+        uint256 amount,
+        bytes32 outerMemo,
+        bytes32 innerMemo
+    ) external onlyWarden nonReentrant whenNotHalted {
+        if (amount == 0) revert CobaltMicaImbrium_AmountZero();
+        if (amount > DRIP_CAP) revert CobaltMicaImbrium_CapBreached(DRIP_CAP);
+        if (!_matrixMember(sink)) revert CobaltMicaImbrium_MemoSinkDenied(sink);
+        if (block.timestamp < lastPulseAt + PULSE_COOLDOWN) {
+            revert CobaltMicaImbrium_CooldownActive(lastPulseAt + PULSE_COOLDOWN);
+        }
+        uint256 bal = address(this).balance;
+        if (amount > bal) revert CobaltMicaImbrium_AmountZero();
+
+        lastPulseAt = block.timestamp;
+        uint256 pn;
+        unchecked {
