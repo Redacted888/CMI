@@ -180,3 +180,29 @@ contract CobaltMicaGlyphFjordImbrium {
         lastPulseAt = block.timestamp;
         uint256 pn;
         unchecked {
+            pn = ++pulseNonce;
+        }
+
+        (bool ok, ) = payable(sink).call{value: amount}("");
+        if (!ok) revert CobaltMicaImbrium_TransferFailed();
+
+        emit CobaltMicaImbrium_MemoPulse(sink, amount, outerMemo, innerMemo);
+        emit CobaltMicaImbrium_Pulse(pn, amount, sink);
+    }
+
+    function depositInk() external payable whenNotHalted {
+        if (msg.value == 0) revert CobaltMicaImbrium_AmountZero();
+        inkLastShift[msg.sender] = block.timestamp;
+        unchecked {
+            inkStake[msg.sender] += msg.value;
+        }
+        emit CobaltMicaImbrium_InkMoved(msg.sender, int256(msg.value), inkStake[msg.sender]);
+    }
+
+    function withdrawInk(uint256 amount) external nonReentrant {
+        if (amount == 0) revert CobaltMicaImbrium_AmountZero();
+        uint256 st = inkStake[msg.sender];
+        if (amount > st) revert CobaltMicaImbrium_InkUnderflow();
+        uint256 ready = inkLastShift[msg.sender] + INK_COOLDOWN;
+        if (block.timestamp < ready) revert CobaltMicaImbrium_InkTimelock(ready);
+
