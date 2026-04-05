@@ -206,3 +206,29 @@ contract CobaltMicaGlyphFjordImbrium {
         uint256 ready = inkLastShift[msg.sender] + INK_COOLDOWN;
         if (block.timestamp < ready) revert CobaltMicaImbrium_InkTimelock(ready);
 
+        inkStake[msg.sender] = st - amount;
+        inkLastShift[msg.sender] = block.timestamp;
+
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        if (!ok) revert CobaltMicaImbrium_TransferFailed();
+
+        emit CobaltMicaImbrium_InkMoved(msg.sender, -int256(amount), inkStake[msg.sender]);
+    }
+
+    function withdrawCredit() external nonReentrant whenNotHalted {
+        uint256 c = kiteCredit[msg.sender];
+        if (c == 0) revert CobaltMicaImbrium_InsufficientCredit();
+        kiteCredit[msg.sender] = 0;
+        (bool ok, ) = payable(msg.sender).call{value: c}("");
+        if (!ok) revert CobaltMicaImbrium_TransferFailed();
+    }
+
+    function _matrixMember(address a) internal pure returns (bool) {
+        return a == TRIPLEX_ALPHA || a == TRIPLEX_BETA || a == TRIPLEX_GAMMA;
+    }
+
+    function isMatrixSink(address a) external pure returns (bool) {
+        return _matrixMember(a);
+    }
+
+    function _leaf(address claimer, uint256 amount) internal view returns (bytes32) {
