@@ -232,3 +232,29 @@ contract CobaltMicaGlyphFjordImbrium {
     }
 
     function _leaf(address claimer, uint256 amount) internal view returns (bytes32) {
+        return keccak256(bytes.concat(keccak256(abi.encode(imbriumSalt, claimer, amount))));
+    }
+
+    function _verifyProof(bytes32[] calldata proof, bytes32 root, bytes32 leaf) internal pure returns (bool) {
+        bytes32 h = leaf;
+        for (uint256 i = 0; i < proof.length; ++i) {
+            bytes32 p = proof[i];
+            h = h < p ? keccak256(abi.encodePacked(h, p)) : keccak256(abi.encodePacked(p, h));
+        }
+        return h == root;
+    }
+
+    function claimGulf(bytes32[] calldata proof, uint256 amount) external nonReentrant whenNotHalted {
+        if (activeMerkleRoot == bytes32(0)) revert CobaltMicaImbrium_MerkleInvalid();
+        if (amount == 0) revert CobaltMicaImbrium_AmountZero();
+        bytes32 lf = _leaf(msg.sender, amount);
+        if (spentClaim[lf]) revert CobaltMicaImbrium_ClaimAlreadySpent(lf);
+        if (!_verifyProof(proof, activeMerkleRoot, lf)) revert CobaltMicaImbrium_MerkleInvalid();
+
+        spentClaim[lf] = true;
+
+        uint256 bal = address(this).balance;
+        if (amount > bal) revert CobaltMicaImbrium_AmountZero();
+
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        if (!ok) revert CobaltMicaImbrium_TransferFailed();
